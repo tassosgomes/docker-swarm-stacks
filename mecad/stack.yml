@@ -32,26 +32,6 @@ services:
       restart_policy:
         condition: on-failure
 
-  mcad-rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-mcad}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-mcad}
-    volumes:
-      - mcad_rmq_data:/var/lib/rabbitmq
-    networks:
-      - mcad-internal
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    deploy:
-      replicas: 0
-      restart_policy:
-        condition: on-failure
-
   mcad-minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -226,6 +206,33 @@ services:
         - traefik.http.routers.mcad-distribuicao.tls=true
         - traefik.http.routers.mcad-distribuicao.tls.certresolver=cloudflare-resolver
         - traefik.http.services.mcad-distribuicao.loadbalancer.server.port=5004
+
+  mcad-frontend:
+    image: ${FRONTEND_IMAGE:-mcad-frontend:latest}
+    environment:
+      CADASTRO_API_BASE_URL: ${CADASTRO_API_BASE_URL:-https://mcad-cadastro.tasso.dev.br/api/v1}
+      IDENTIFICACAO_API_BASE_URL: ${IDENTIFICACAO_API_BASE_URL:-https://mcad-identificacao.tasso.dev.br/api/v1}
+      ARRECADACAO_API_BASE_URL: ${ARRECADACAO_API_BASE_URL:-https://mcad-arrecadacao.tasso.dev.br/api/v1}
+      DISTRIBUICAO_API_BASE_URL: ${DISTRIBUICAO_API_BASE_URL:-https://mcad-distribuicao.tasso.dev.br/api/v1}
+      OIDC_AUTHORITY: ${OIDC_AUTHORITY:?OIDC_AUTHORITY is required for frontend}
+      OIDC_CLIENT_ID: ${FRONTEND_OIDC_CLIENT_ID:?FRONTEND_OIDC_CLIENT_ID is required}
+      OIDC_AUDIENCE: ${FRONTEND_OIDC_AUDIENCE:-mcad-frontend}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-https://mcad.tasso.dev.br/callback}
+      OIDC_POST_LOGOUT_REDIRECT_URI: ${OIDC_POST_LOGOUT_REDIRECT_URI:-https://mcad.tasso.dev.br/logout}
+    networks:
+      - traefik-public
+    deploy:
+      replicas: ${FRONTEND_REPLICAS:-1}
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.http.routers.mcad-frontend.rule=Host(`${FRONTEND_HOST:-mcad.tasso.dev.br}`)
+        - traefik.http.routers.mcad-frontend.entrypoints=websecure
+        - traefik.http.routers.mcad-frontend.tls=true
+        - traefik.http.routers.mcad-frontend.tls.certresolver=cloudflare-resolver
+        - traefik.http.services.mcad-frontend.loadbalancer.server.port=80
 
 networks:
   mcad-internal:
