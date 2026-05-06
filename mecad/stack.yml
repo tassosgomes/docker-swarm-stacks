@@ -82,6 +82,7 @@ services:
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-mcad-frontend}
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
       ISWC_BASE_URL: ${ISWC_BASE_URL:-https://iswc.tasso.dev.br/}
+      CORS_ALLOWED_ORIGINS: https://mcad.tasso.dev.br
     networks:
       - mcad-internal
       - traefik-public
@@ -123,6 +124,7 @@ services:
       OIDC_AUTHORITY: ${OIDC_AUTHORITY:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-mcad-frontend}
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://mcad.tasso.dev.br}
     networks:
       - mcad-internal
       - traefik-public
@@ -191,6 +193,7 @@ services:
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-mcad}
       OIDC_AUTHORITY: ${OIDC_AUTHORITY:-}
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      DISTRIBUICAO_CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://mcad.tasso.dev.br}
     networks:
       - mcad-internal
       - traefik-public
