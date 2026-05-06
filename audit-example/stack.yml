@@ -1,0 +1,129 @@
+services:
+  oracle:
+    image: ${ORACLE_IMAGE:-gvenzl/oracle-free:23-slim}
+    networks:
+      - audit-net
+    ports:
+      - target: 1521
+        published: ${ORACLE_PORT:-1521}
+        protocol: tcp
+        mode: ingress
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:?ORACLE_SYS_PASSWORD is required}
+      APP_USER: ${AUDIT_DB_USER:-AUDIT_APP}
+      APP_USER_PASSWORD: ${AUDIT_DB_PASSWORD:?AUDIT_DB_PASSWORD is required for Oracle bootstrap}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SELECT 1 FROM dual;' | sqlplus -s system/$${ORACLE_PASSWORD}@localhost/FREEPDB1 | grep -q 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 300s
+      resources:
+        reservations:
+          cpus: "${ORACLE_CPU_RESERVATION:-0.50}"
+          memory: ${ORACLE_MEMORY_RESERVATION:-2G}
+        limits:
+          cpus: "${ORACLE_CPU_LIMIT:-2.00}"
+          memory: ${ORACLE_MEMORY_LIMIT:-4G}
+      labels:
+        br.org.ecad.service: oracle
+
+  audit-service:
+    image: ${AUDIT_SERVICE_IMAGE:-ecad/audit-service:latest}
+    networks:
+      - audit-net
+      - traefik-public
+    ports:
+      - target: 8080
+        published: ${AUDIT_SERVICE_PORT:-8080}
+        protocol: tcp
+        mode: ingress
+    environment:
+      AUDIT_SERVICE_PORT: "8080"
+      AUDIT_DB_URL: ${AUDIT_DB_URL:-jdbc:oracle:thin:@//oracle:1521/FREEPDB1}
+      AUDIT_DB_USER: ${AUDIT_DB_USER:-AUDIT_APP}
+      AUDIT_DB_PASSWORD_FILE: /run/secrets/audit_db_password
+      AUDIT_FLYWAY_ENABLED: ${AUDIT_FLYWAY_ENABLED:-true}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:?RABBITMQ_HOST is required}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-audit}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_PASSWORD_FILE: /run/secrets/rabbitmq_password
+      AUDIT_SECURITY_ENABLED: ${AUDIT_SECURITY_ENABLED:-false}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:-}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError}
+    secrets:
+      - audit_db_password
+      - rabbitmq_password
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health/readiness || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      mode: replicated
+      replicas: ${AUDIT_SERVICE_REPLICAS:-2}
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 120s
+      resources:
+        reservations:
+          cpus: "${AUDIT_SERVICE_CPU_RESERVATION:-0.25}"
+          memory: ${AUDIT_SERVICE_MEMORY_RESERVATION:-512M}
+        limits:
+          cpus: "${AUDIT_SERVICE_CPU_LIMIT:-1.00}"
+          memory: ${AUDIT_SERVICE_MEMORY_LIMIT:-1024M}
+      labels:
+        - br.org.ecad.service=audit-service
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.http.routers.audit-demo.rule=Host(`api-audit.tasso.dev.br`)
+        - traefik.http.routers.audit-demo.entrypoints=websecure
+        - traefik.http.routers.audit-demo.tls=true
+        - traefik.http.routers.audit-demo.tls.certresolver=cloudflare-resolver
+        - traefik.http.services.audit-demo.loadbalancer.server.port=8080
+
+networks:
+  audit-net:
+    external: true
+    name: ${AUDIT_NETWORK_NAME:-audit-net}
+  traefik-public:
+    external: true
+
+volumes:
+  oracle-data:
+    name: ${ORACLE_VOLUME_NAME:-audit-oracle-data}
+
+secrets:
+  audit_db_password:
+    external: true
+    name: ${AUDIT_DB_PASSWORD_SECRET:-audit_db_password}
+  rabbitmq_password:
+    external: true
+    name: ${RABBITMQ_PASSWORD_SECRET:-rabbitmq_password}
