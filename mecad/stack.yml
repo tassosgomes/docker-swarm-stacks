@@ -77,7 +77,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER:-mcad}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-mcad}
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-mcad}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@mcad-rabbitmq:5672/${RABBITMQ_VHOST:-mcad}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-mcad}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@kebnekaise.lmq.cloudamqp.com:5672/${RABBITMQ_VHOST:-mcad}
       OIDC_AUTHORITY: ${OIDC_AUTHORITY:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-mcad-frontend}
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
@@ -120,7 +120,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER:-mcad}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-mcad}
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-mcad}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@mcad-rabbitmq:5672/${RABBITMQ_VHOST:-mcad}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-mcad}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@kebnekaise.lmq.cloudamqp.com:5672/${RABBITMQ_VHOST:-mcad}
       OIDC_AUTHORITY: ${OIDC_AUTHORITY:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-mcad-frontend}
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
