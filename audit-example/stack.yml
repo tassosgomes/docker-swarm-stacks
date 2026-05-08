@@ -43,34 +43,31 @@ services:
         br.org.ecad.service: oracle
 
   audit-service:
-    image: ${AUDIT_SERVICE_IMAGE:-ecad/audit-service:latest}
+    image: ${AUDIT_SERVICE_IMAGE:-tassosgomes/audit-service:v0.1.0}
     networks:
       - audit-net
       - traefik-public
-    ports:
-      - target: 8080
-        published: ${AUDIT_SERVICE_PORT:-8080}
-        protocol: tcp
-        mode: ingress
     environment:
-      AUDIT_SERVICE_PORT: "8080"
+      AUDIT_SERVICE_PORT: ${AUDIT_SERVICE_PORT:-5003}
       AUDIT_DB_URL: ${AUDIT_DB_URL:-jdbc:oracle:thin:@//oracle:1521/FREEPDB1}
       AUDIT_DB_USER: ${AUDIT_DB_USER:-AUDIT_APP}
       AUDIT_DB_PASSWORD_FILE: /run/secrets/audit_db_password
       AUDIT_FLYWAY_ENABLED: ${AUDIT_FLYWAY_ENABLED:-true}
-      RABBITMQ_HOST: ${RABBITMQ_HOST:?RABBITMQ_HOST is required}
-      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
-      RABBITMQ_USER: ${RABBITMQ_USER:-audit}
-      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:?Set the CloudAMQP host}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5671}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:?Set the CloudAMQP vhost}
+      RABBITMQ_USER: ${RABBITMQ_USER:?Set the CloudAMQP user}
       RABBITMQ_PASSWORD_FILE: /run/secrets/rabbitmq_password
+      SPRING_RABBITMQ_SSL_ENABLED: ${SPRING_RABBITMQ_SSL_ENABLED:-true}
       AUDIT_SECURITY_ENABLED: ${AUDIT_SECURITY_ENABLED:-false}
+      AUDIT_CORS_ALLOWED_ORIGIN_PATTERNS: ${AUDIT_CORS_ALLOWED_ORIGIN_PATTERNS:-https://*.tasso.dev.br}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:-}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError}
     secrets:
       - audit_db_password
       - rabbitmq_password
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health/readiness || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${AUDIT_SERVICE_PORT}/actuator/health/readiness || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -100,14 +97,14 @@ services:
           cpus: "${AUDIT_SERVICE_CPU_LIMIT:-1.00}"
           memory: ${AUDIT_SERVICE_MEMORY_LIMIT:-1024M}
       labels:
-        - br.org.ecad.service=audit-service
         - traefik.enable=true
         - traefik.docker.network=traefik-public
-        - traefik.http.routers.audit-demo.rule=Host(`api-audit.tasso.dev.br`)
-        - traefik.http.routers.audit-demo.entrypoints=websecure
-        - traefik.http.routers.audit-demo.tls=true
-        - traefik.http.routers.audit-demo.tls.certresolver=cloudflare-resolver
-        - traefik.http.services.audit-demo.loadbalancer.server.port=8080
+        - "traefik.http.routers.audit-service.rule=Host(`${AUDIT_API_HOST:-api-audit.tasso.dev.br}`)"
+        - traefik.http.routers.audit-service.entrypoints=websecure
+        - traefik.http.routers.audit-service.tls=true
+        - traefik.http.routers.audit-service.tls.certresolver=cloudflare-resolver
+        - traefik.http.services.audit-service.loadbalancer.server.port=5003
+        - br.org.ecad.service=audit-service
 
 networks:
   audit-net:
@@ -115,6 +112,7 @@ networks:
     name: ${AUDIT_NETWORK_NAME:-audit-net}
   traefik-public:
     external: true
+    name: ${TRAEFIK_NETWORK_NAME:-traefik-public}
 
 volumes:
   oracle-data:
