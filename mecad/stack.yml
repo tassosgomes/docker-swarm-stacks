@@ -243,11 +243,11 @@ services:
     environment:
       BFF_PORT: 5200
       BFF_HOST: 0.0.0.0
-      CADASTRO_API_BASE_URL: http://mcad-cadastro-api:5001/api/v1
-      IDENTIFICACAO_API_BASE_URL: http://mcad-identificacao-api:5100/api/v1
-      ARRECADACAO_API_BASE_URL: http://mcad-arrecadacao-api:5003/api/v1
-      DISTRIBUICAO_API_BASE_URL: http://mcad-distribuicao-api:5004/api/v1
-      AUDITORIA_API_BASE_URL: ${AUDITORIA_API_BASE_URL:-https://api-audit.tasso.dev.br/api/v1}
+      CADASTRO_API_BASE_URL: https://mcad-cadastro.tasso.dev.br/api/v1
+      IDENTIFICACAO_API_BASE_URL: https://mcad-identificacao.tasso.dev.br/api/v1
+      ARRECADACAO_API_BASE_URL: https://mcad-arrecadacao.tasso.dev.br/api/v1
+      DISTRIBUICAO_API_BASE_URL: https://mcad-distribuicao.tasso.dev.br/api/v1
+      AUDITORIA_API_BASE_URL: https://api-audit.tasso.dev.br/api/v1
     networks:
       - mcad-internal
       - traefik-public
